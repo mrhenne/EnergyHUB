@@ -1,1 +1,436 @@
+import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { 
+  Sun, Battery, Zap, Euro, TrendingUp, Leaf, 
+  Settings, Calendar, ArrowRight, ShieldCheck, 
+  Moon, Download, Upload, PlusCircle, Trash2, Home,
+  Tv, Car, Bike, Power
+} from 'lucide-react';
+import { 
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, 
+  ResponsiveContainer, Legend
+} from 'recharts';
 
+const INITIAL_PRODUCERS = ['Garagendach', 'EcoFlow'];
+
+const INITIAL_DATA = {
+  2025: { export: 120, isPartial: false, productions: { Garagendach: 950, EcoFlow: 280 } },
+  2026: { export: 33, isPartial: true, productions: { Garagendach: 401, EcoFlow: 131 } }
+};
+
+const CO2_FACTOR = 0.434;
+
+export default function App() {
+  // --- STATE ---
+  const [darkMode, setDarkMode] = useState(true); // Default auf Dark Mode wegen des neuen UI Styles
+  const [producers, setProducers] = useState(INITIAL_PRODUCERS);
+  const [solarData, setSolarData] = useState(INITIAL_DATA);
+  const [electricityPrice, setElectricityPrice] = useState(0.28);
+  const [hardwareCost, setHardwareCost] = useState(1500);
+  const [selectedYear, setSelectedYear] = useState('2026');
+  
+  // UI States
+  const [showAddYearForm, setShowAddYearForm] = useState(false);
+  const [showProducerManager, setShowProducerManager] = useState(false);
+  const [newProducerName, setNewProducerName] = useState('');
+  
+  // State für neues Jahr
+  const [newYearForm, setNewYearForm] = useState({
+    year: new Date().getFullYear() + 1,
+    export: 0,
+    isPartial: false,
+    productions: INITIAL_PRODUCERS.reduce((acc, curr) => ({ ...acc, [curr]: 0 }), {})
+  });
+
+  const fileInputRef = useRef(null);
+
+  // Dark Mode anwenden
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [darkMode]);
+
+  // --- PRODUZENTEN MANAGEMENT ---
+  const handleAddProducer = (e) => {
+    e.preventDefault();
+    if (!newProducerName.trim() || producers.includes(newProducerName.trim())) return;
+    
+    const name = newProducerName.trim();
+    setProducers([...producers, name]);
+    
+    // Allen existierenden Jahren den neuen Produzenten mit 0 kWh hinzufügen
+    setSolarData(prev => {
+      const newData = { ...prev };
+      Object.keys(newData).forEach(year => {
+        newData[year].productions[name] = 0;
+      });
+      return newData;
+    });
+    
+    setNewYearForm(prev => ({
+      ...prev,
+      productions: { ...prev.productions, [name]: 0 }
+    }));
+    
+    setNewProducerName('');
+  };
+
+  const handleRemoveProducer = (producerToRemove) => {
+    setProducers(producers.filter(p => p !== producerToRemove));
+    
+    setSolarData(prev => {
+      const newData = JSON.parse(JSON.stringify(prev)); // Deep copy
+      Object.keys(newData).forEach(year => {
+        delete newData[year].productions[producerToRemove];
+      });
+      return newData;
+    });
+  };
+
+  const handleUpdateProduction = (year, producer, value) => {
+    setSolarData(prev => ({
+      ...prev,
+      [year]: {
+        ...prev[year],
+        productions: {
+          ...prev[year].productions,
+          [producer]: Number(value)
+        }
+      }
+    }));
+  };
+
+  // --- DATEN EXPORT / IMPORT ---
+  const handleExport = () => {
+    const dataToExport = { solarData, producers, electricityPrice, hardwareCost };
+    const blob = new Blob([JSON.stringify(dataToExport, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `energy_hub_backup_${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImport = (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const imported = JSON.parse(e.target.result);
+        if (imported.solarData) setSolarData(imported.solarData);
+        if (imported.producers) setProducers(imported.producers);
+        if (imported.electricityPrice) setElectricityPrice(imported.electricityPrice);
+        if (imported.hardwareCost) setHardwareCost(imported.hardwareCost);
+      } catch (err) {
+        console.error("Fehler beim Import");
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  // --- JAHRES MANAGEMENT ---
+  const handleAddYear = (e) => {
+    e.preventDefault();
+    setSolarData(prev => ({
+      ...prev,
+      [newYearForm.year]: {
+        export: Number(newYearForm.export),
+        isPartial: newYearForm.isPartial,
+        productions: { ...newYearForm.productions }
+      }
+    }));
+    setSelectedYear(newYearForm.year.toString());
+    setShowAddYearForm(false);
+  };
+
+  // --- GLOBALE BERECHNUNGEN ---
+  const currentData = solarData[selectedYear] || { export: 0, isPartial: false, productions: {} };
+  
+  const totalProduction = useMemo(() => {
+    return Object.values(currentData.productions || {}).reduce((sum, val) => sum + (Number(val) || 0), 0);
+  }, [currentData]);
+
+  const selfConsumption = totalProduction - currentData.export;
+  const savingsEuro = selfConsumption * electricityPrice;
+  const exportLossEuro = currentData.export * electricityPrice;
+  const efficiencyRate = totalProduction > 0 ? (selfConsumption / totalProduction) * 100 : 0;
+
+  // Chart Daten
+  const chartData = Object.keys(solarData).sort().map(year => {
+    const d = solarData[year];
+    const totalProd = Object.values(d.productions).reduce((a, b) => a + Number(b), 0);
+    const consumed = totalProd - d.export;
+    
+    // Alle Produzenten für den Chart mappen
+    const dataPoint = { year, Eigenverbrauch: consumed };
+    producers.forEach(p => {
+      dataPoint[p] = d.productions[p] || 0;
+    });
+    return dataPoint;
+  });
+
+  const COLORS = ['#f59e0b', '#3b82f6', '#8b5cf6', '#ec4899', '#14b8a6'];
+
+  const formatEuro = (val) => `${Number(val).toFixed(2)} €`;
+  const formatKwh = (val) => `${Number(val).toFixed(0)} kWh`;
+
+  return (
+    <div className={`min-h-screen font-sans transition-colors duration-200 ${darkMode ? 'dark bg-[#121212] text-slate-100' : 'bg-slate-50 text-slate-800'}`}>
+      
+      {/* ECOFLOW STYLE TOP HEADER */}
+      <div className="bg-[#1a1a1a] border-b border-white/5 dark:text-white pb-4 pt-6 px-4 md:px-8 shadow-md">
+        <div className="max-w-7xl mx-auto">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+            
+            <div className="flex items-center gap-4">
+              <div className="bg-amber-500/20 p-3 rounded-full">
+                <Sun className="text-amber-500" size={28} />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold tracking-tight">Henne's Energy Hub</h1>
+                <div className="text-amber-500 text-sm font-semibold flex items-center gap-1 mt-1">
+                  16°C <span className="text-slate-400 ml-2 font-normal">Sonnig erwartet</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-8 md:gap-16">
+              <div>
+                <div className="text-sm text-slate-400 font-medium mb-1">Erträge {selectedYear}</div>
+                <div className="text-3xl font-bold text-amber-500">{formatEuro(savingsEuro)}</div>
+              </div>
+              <div>
+                <div className="text-sm text-slate-400 font-medium mb-1">Erzeugung {selectedYear}</div>
+                <div className="text-3xl font-bold text-white">{totalProduction.toFixed(1)} <span className="text-lg text-slate-400">kWh</span></div>
+              </div>
+              <div className="hidden sm:block">
+                <div className="text-sm text-slate-400 font-medium mb-1">Verbrauch {selectedYear}</div>
+                <div className="text-3xl font-bold text-emerald-400">{selfConsumption.toFixed(1)} <span className="text-lg text-slate-400">kWh</span></div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto p-4 md:p-8 space-y-6">
+        
+        {/* KONTROLLLEISTE */}
+        <div className="flex flex-wrap justify-between items-center gap-4 bg-white dark:bg-[#1a1a1a] p-4 rounded-2xl shadow-sm border border-slate-200 dark:border-white/5">
+          <div className="flex items-center gap-3">
+            <Calendar className="text-blue-500" size={20} />
+            <select 
+              className="text-xl font-bold bg-transparent focus:outline-none cursor-pointer dark:text-white"
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(e.target.value)}
+            >
+              {Object.keys(solarData).sort().reverse().map(year => (
+                <option key={year} value={year} className="dark:bg-slate-800">{year}</option>
+              ))}
+            </select>
+            <div className="h-6 w-px bg-slate-300 dark:bg-slate-700 mx-2"></div>
+            <button onClick={() => setShowAddYearForm(!showAddYearForm)} className="text-sm font-bold text-slate-500 hover:text-blue-500 transition-colors">Jahr +</button>
+            <button onClick={() => setShowProducerManager(!showProducerManager)} className="text-sm font-bold text-slate-500 hover:text-amber-500 transition-colors ml-2">Hardware Setup</button>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button onClick={() => setDarkMode(!darkMode)} className="p-2 rounded-lg bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 transition-colors">
+              {darkMode ? <Sun size={18} className="text-amber-400"/> : <Moon size={18} className="text-slate-600"/>}
+            </button>
+            <button onClick={handleExport} className="p-2 rounded-lg bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 transition-colors" title="Backup speichern"><Download size={18} className="dark:text-slate-300" /></button>
+            <button onClick={() => fileInputRef.current?.click()} className="p-2 rounded-lg bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 transition-colors" title="Backup laden"><Upload size={18} className="dark:text-slate-300" /></button>
+            <input type="file" ref={fileInputRef} onChange={handleImport} accept=".json" className="hidden" />
+            
+            <div className="flex items-center gap-2 bg-slate-100 dark:bg-white/5 p-2 rounded-lg px-3">
+              <Euro className="text-slate-500 dark:text-slate-400" size={16} />
+              <input type="number" step="0.01" className="w-14 bg-transparent font-bold focus:outline-none text-right dark:text-white" value={electricityPrice} onChange={(e) => setElectricityPrice(Number(e.target.value))} />
+              <span className="text-xs font-medium text-slate-500">/ kWh</span>
+            </div>
+          </div>
+        </div>
+
+        {/* PRODUZENTEN MANAGER (EXPANDABLE) */}
+        {showProducerManager && (
+          <div className="bg-white dark:bg-[#1a1a1a] p-6 rounded-2xl shadow-sm border border-slate-200 dark:border-white/5 animate-in fade-in slide-in-from-top-4">
+            <h3 className="text-lg font-bold mb-4 flex items-center gap-2 dark:text-white">
+              <Settings className="text-amber-500" size={20}/> Hardware Setup (Quellen)
+            </h3>
+            <div className="flex flex-wrap gap-3 mb-6">
+              {producers.map(p => (
+                <div key={p} className="flex items-center gap-2 bg-slate-100 dark:bg-white/5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-white/10">
+                  <span className="font-semibold text-sm dark:text-slate-200">{p}</span>
+                  <button onClick={() => handleRemoveProducer(p)} className="text-red-400 hover:text-red-500"><Trash2 size={14}/></button>
+                </div>
+              ))}
+            </div>
+            <form onSubmit={handleAddProducer} className="flex items-center gap-3">
+              <input 
+                type="text" placeholder="Neuer Produzent (z.B. Balkonkraftwerk)" 
+                className="flex-1 max-w-sm p-2 rounded-lg bg-slate-50 dark:bg-[#121212] border border-slate-200 dark:border-white/10 focus:outline-none dark:text-white"
+                value={newProducerName} onChange={e => setNewProducerName(e.target.value)}
+              />
+              <button type="submit" className="bg-amber-500 text-[#121212] font-bold px-4 py-2 rounded-lg hover:bg-amber-400 transition-colors flex items-center gap-2">
+                <PlusCircle size={18}/> Hinzufügen
+              </button>
+            </form>
+          </div>
+        )}
+
+        {/* MAIN LAYOUT */}
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+          
+          <div className="xl:col-span-2 space-y-6">
+            
+            {/* ENERGIEFLUSS ARCHITEKTUR (ECOFLOW STYLE) */}
+            <div className="bg-gradient-to-b from-slate-100 to-slate-200 dark:from-[#1a1a1a] dark:to-[#121212] rounded-3xl p-8 border border-slate-300 dark:border-white/5 shadow-inner relative overflow-hidden">
+              <h3 className="text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider text-sm mb-8">System Topologie ({selectedYear})</h3>
+              
+              <div className="grid grid-cols-3 gap-y-16 relative z-10">
+                {/* Oben Links: Netz */}
+                <div className="flex flex-col items-center justify-start text-center">
+                  <div className="text-red-500 font-black text-2xl drop-shadow-sm">{currentData.export.toFixed(0)} <span className="text-sm">kWh</span></div>
+                  <div className="text-slate-500 dark:text-slate-400 font-medium text-sm mt-1 flex items-center gap-1"><ArrowRight size={14}/> Einspeisung</div>
+                  <div className="mt-4 p-4 bg-white dark:bg-white/5 rounded-2xl shadow-sm border border-slate-200 dark:border-white/10">
+                    <Power className="text-slate-400" size={28}/>
+                  </div>
+                </div>
+
+                {/* Oben Mitte: Solar Produzenten */}
+                <div className="flex flex-col items-center text-center">
+                  <div className="text-amber-500 font-black text-3xl drop-shadow-md">{totalProduction.toFixed(0)} <span className="text-lg">kWh</span></div>
+                  <div className="text-slate-500 dark:text-slate-400 font-medium text-sm mt-1">Gesamte Erzeugung</div>
+                  <div className="mt-4 flex flex-col gap-2 w-full max-w-[200px]">
+                    {producers.map((p, idx) => (
+                      <div key={p} className="flex justify-between items-center bg-white dark:bg-[#1a1a1a] p-2 px-3 rounded-xl shadow-sm border border-amber-200 dark:border-amber-500/20">
+                        <span className="text-xs font-bold dark:text-slate-300 truncate mr-2">{p}</span>
+                        <input 
+                          type="number" className="w-16 bg-transparent text-right font-black text-amber-600 dark:text-amber-400 focus:outline-none"
+                          value={currentData.productions[p] || 0}
+                          onChange={(e) => handleUpdateProduction(selectedYear, p, e.target.value)}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Oben Rechts: Haus */}
+                <div className="flex flex-col items-center justify-start text-center">
+                  <div className="text-emerald-500 font-black text-2xl drop-shadow-sm">{selfConsumption.toFixed(0)} <span className="text-sm">kWh</span></div>
+                  <div className="text-slate-500 dark:text-slate-400 font-medium text-sm mt-1 flex items-center gap-1"><Home size={14}/> Hausnetz</div>
+                  <div className="mt-4 p-5 bg-white dark:bg-emerald-900/20 rounded-2xl shadow-sm border border-slate-200 dark:border-emerald-500/30">
+                    <Home className="text-emerald-500" size={32}/>
+                  </div>
+                </div>
+              </div>
+
+              {/* Dekorative Verbindungslinien (CSS Basis) */}
+              <div className="absolute inset-0 pointer-events-none opacity-20 dark:opacity-40">
+                <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M 50% 30% L 50% 70% L 80% 70% L 80% 30%" stroke="url(#emeraldGrad)" strokeWidth="3" fill="none" />
+                  <path d="M 50% 30% L 50% 70% L 20% 70% L 20% 30%" stroke="#ef4444" strokeWidth="3" fill="none" strokeDasharray="5,5" />
+                  <defs>
+                    <linearGradient id="emeraldGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" stopColor="#f59e0b" />
+                      <stop offset="100%" stopColor="#10b981" />
+                    </linearGradient>
+                  </defs>
+                </svg>
+              </div>
+            </div>
+
+            {/* CHART */}
+            <div className="bg-white dark:bg-[#1a1a1a] rounded-2xl shadow-sm border border-slate-200 dark:border-white/5 p-6">
+              <h3 className="text-lg font-black mb-6 flex items-center gap-2 dark:text-white">
+                <TrendingUp className="text-blue-500" size={20}/>
+                Wachstum & Setup Vergleich
+              </h3>
+              <div className="h-72 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData} margin={{ top: 20, right: 0, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={darkMode ? '#333' : '#e2e8f0'} />
+                    <XAxis dataKey="year" axisLine={false} tickLine={false} tick={{fill: darkMode ? '#9ca3af' : '#64748b', fontWeight: 'bold'}} />
+                    <YAxis axisLine={false} tickLine={false} tickFormatter={(val) => `${val} kWh`} tick={{fill: darkMode ? '#9ca3af' : '#64748b'}} />
+                    <RechartsTooltip 
+                      cursor={{fill: darkMode ? '#222' : '#f8fafc'}}
+                      contentStyle={{backgroundColor: darkMode ? '#111' : '#fff', border: darkMode ? '1px solid #333' : 'none', borderRadius: '12px', color: darkMode ? '#fff' : '#000', fontWeight: 'bold'}}
+                    />
+                    <Legend iconType="circle" wrapperStyle={{fontWeight: 'bold', paddingTop: '10px'}}/>
+                    
+                    {producers.map((p, idx) => (
+                      <Bar key={p} dataKey={p} stackId="a" fill={COLORS[idx % COLORS.length]} radius={idx === 0 ? [0,0,4,4] : [0,0,0,0]} />
+                    ))}
+                    
+                    <Bar dataKey="Eigenverbrauch" fill="#10b981" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+          </div>
+
+          {/* RIGHT COLUMN: Fun Facts & ROI */}
+          <div className="space-y-6">
+            
+            {/* REAL LIFE IMPACT */}
+            <div className="bg-gradient-to-br from-indigo-500 to-blue-600 rounded-2xl shadow-xl p-6 text-white relative overflow-hidden">
+              <div className="absolute top-0 right-0 p-4 opacity-10"><Zap size={100} /></div>
+              <h3 className="text-xl font-black mb-1 relative z-10">Real Life Impact</h3>
+              <p className="text-blue-100 text-sm mb-6 relative z-10">Was deine {totalProduction.toFixed(0)} kWh im Jahr {selectedYear} antreiben könnten.</p>
+              
+              <div className="space-y-4 relative z-10">
+                <div className="bg-white/10 p-3 rounded-xl flex items-center justify-between backdrop-blur-sm border border-white/20">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-white/20 p-2 rounded-lg"><Car size={20}/></div>
+                    <span className="font-medium">Tesla Model 3</span>
+                  </div>
+                  <div className="font-black text-xl text-right">
+                    {((totalProduction / 15) * 100).toFixed(0)} <span className="text-sm font-normal text-blue-200">km</span>
+                  </div>
+                </div>
+
+                <div className="bg-white/10 p-3 rounded-xl flex items-center justify-between backdrop-blur-sm border border-white/20">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-white/20 p-2 rounded-lg"><Tv size={20}/></div>
+                    <span className="font-medium">Netflix Stream</span>
+                  </div>
+                  <div className="font-black text-xl text-right">
+                    {(totalProduction / 0.1).toFixed(0)} <span className="text-sm font-normal text-blue-200">h</span>
+                  </div>
+                </div>
+
+                <div className="bg-white/10 p-3 rounded-xl flex items-center justify-between backdrop-blur-sm border border-white/20">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-white/20 p-2 rounded-lg"><Bike size={20}/></div>
+                    <span className="font-medium">E-Bike Akku</span>
+                  </div>
+                  <div className="font-black text-xl text-right">
+                    {(totalProduction / 0.5).toFixed(0)} <span className="text-sm font-normal text-blue-200">Ladungen</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* QUICK STATS */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-white dark:bg-[#1a1a1a] p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-white/5 text-center">
+                <Leaf className="mx-auto text-emerald-500 mb-2" size={24} />
+                <div className="text-xl font-black dark:text-white">{(totalProduction * CO2_FACTOR).toFixed(0)} kg</div>
+                <div className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-semibold">CO2 Ersparnis</div>
+              </div>
+              <div className="bg-white dark:bg-[#1a1a1a] p-5 rounded-2xl shadow-sm border border-slate-200 dark:border-white/5 text-center">
+                <ShieldCheck className="mx-auto text-blue-500 mb-2" size={24} />
+                <div className="text-xl font-black dark:text-white">{efficiencyRate.toFixed(1)}%</div>
+                <div className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-semibold">Effizienzgrad</div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

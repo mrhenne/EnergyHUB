@@ -45,7 +45,7 @@
     };
 
     const { useState, useMemo, useRef, useEffect } = React;
-    const { ComposedChart, Line, Bar, XAxis, YAxis, CartesianGrid, Tooltip: RechartsTooltip, ResponsiveContainer, Legend } = window.Recharts;
+    const { AreaChart, Area, XAxis, Tooltip: RechartsTooltip, ResponsiveContainer } = window.Recharts;
 
     const Icons = {
       Sun: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>,
@@ -89,7 +89,6 @@
       2026: { export: 33, consumption: 1500, isPartial: true, productions: { Garagendach: 401, EcoFlow: 131 } }
     };
     const CO2_FACTOR = 0.434;
-    const CHART_COLORS = ['#f59e0b', '#3b82f6', '#8b5cf6', '#ec4899', '#14b8a6'];
 
     function App() {
       const [darkMode, setDarkMode] = useState(true);
@@ -301,14 +300,23 @@
       const prognosisProduction = totalProduction * seasonalMultiplier;
       const prognosisSavings = (prognosisProduction * (efficiencyRate/100)) * electricityPrice;
 
-      // Chart Daten
+      // Chart Daten & Performance Liste
       const chartData = Object.keys(solarData).sort().map(year => {
         const d = solarData[year];
         const totalProd = Object.values(d.productions).reduce((a, b) => a + Number(b), 0);
         const consumed = Math.max(0, totalProd - d.export);
         const hausverbrauch = d.consumption || consumed; 
+        const autarkie = hausverbrauch > 0 ? (consumed / hausverbrauch) * 100 : 0;
+        const ersparnis = consumed * electricityPrice;
         
-        const dataPoint = { year, Eigenverbrauch: consumed, Hausverbrauch: hausverbrauch };
+        const dataPoint = { 
+          year, 
+          Erzeugung: totalProd, 
+          Eigenverbrauch: consumed, 
+          Hausverbrauch: hausverbrauch,
+          Autarkie: autarkie,
+          Ersparnis: ersparnis
+        };
         producers.forEach(p => {
           dataPoint[p] = d.productions[p] || 0;
         });
@@ -318,23 +326,12 @@
       const formatEuro = (val) => `${Number(val).toFixed(2)} €`;
       const formatKwh = (val) => `${Number(val).toFixed(0)} kWh`;
 
-      const CustomTooltip = ({ active, payload, label }) => {
+      // Simpler Tooltip für die Sparkline
+      const SparklineTooltip = ({ active, payload, label }) => {
         if (active && payload && payload.length) {
           return (
-            <div className="bg-white dark:bg-[#1a1a1a] border border-slate-200 dark:border-white/10 p-4 rounded-xl shadow-2xl backdrop-blur-md">
-              <p className="font-black text-lg mb-2 dark:text-white border-b border-slate-100 dark:border-white/10 pb-2">{label}</p>
-              {payload.map((entry, index) => {
-                const color = entry.color || entry.stroke || entry.fill;
-                return (
-                  <div key={index} className="flex justify-between gap-6 py-1">
-                    <span className="font-bold flex items-center gap-2" style={{ color: color }}>
-                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: color }}></div>
-                      {entry.name}
-                    </span>
-                    <span className="font-black dark:text-white">{Number(entry.value).toFixed(0)} kWh</span>
-                  </div>
-                )
-              })}
+            <div className="bg-white dark:bg-slate-800 text-slate-800 dark:text-white text-xs font-bold py-1 px-3 rounded-lg shadow-xl border border-slate-200 dark:border-white/10">
+              {label}: <span className="text-emerald-500">{formatEuro(payload[0].value)}</span>
             </div>
           );
         }
@@ -484,7 +481,7 @@
               
               <div className="xl:col-span-2 space-y-6">
                 
-                {/* NEUE ENERGIEFLUSS ARCHITEKTUR - RESPONSIVE TYPOGRAPHIE */}
+                {/* NEUE ENERGIEFLUSS ARCHITEKTUR */}
                 <div className="bg-gradient-to-b from-slate-100 to-slate-200 dark:from-[#1a1a1a] dark:to-[#121212] rounded-3xl p-4 sm:p-6 md:p-10 border border-slate-300 dark:border-white/5 shadow-inner relative overflow-hidden flex flex-col items-center">
                   <div className="flex flex-col sm:flex-row justify-between w-full items-center mb-6 gap-3">
                     <h3 className="text-slate-500 dark:text-slate-400 font-black uppercase tracking-wider text-xs sm:text-sm flex items-center gap-2 text-center sm:text-left">
@@ -680,40 +677,71 @@
                   </div>
                 </div>
 
-                {/* MODERNERES COMPOSED CHART - RESPONSIBLE SCALING FIX */}
-                <div className="bg-white dark:bg-[#1a1a1a] rounded-3xl shadow-lg border border-slate-200 dark:border-white/5 p-4 sm:p-6 md:p-8">
+                {/* NEUE PERFORMANCE MATRIX (Ohne BarCharts, Slim & Modern) */}
+                <div className="bg-white dark:bg-[#1a1a1a] rounded-3xl shadow-lg border border-slate-200 dark:border-white/5 p-4 sm:p-6 md:p-8 relative overflow-hidden">
                   <h3 className="text-lg sm:text-xl font-black mb-6 sm:mb-8 flex items-center gap-2 dark:text-white">
-                    <Icon name="Activity" className="text-blue-500" size={24}/>
-                    Performance Historie (Composed)
+                    <Icon name="Activity" className="text-emerald-500" size={24}/>
+                    Performance Matrix
                   </h3>
-                  <div className="h-64 sm:h-80 md:h-[400px] w-full">
+                  
+                  {/* Slim Trend AreaChart im Hintergrund/Kopfbereich */}
+                  <div className="h-24 sm:h-32 w-full mb-6 opacity-90">
                     <ResponsiveContainer width="100%" height="100%">
-                      <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                      <AreaChart data={chartData}>
                         <defs>
-                          {CHART_COLORS.map((color, idx) => (
-                            <linearGradient key={`grad-${idx}`} id={`grad-${idx}`} x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="0%" stopColor={color} stopOpacity={1}/>
-                              <stop offset="100%" stopColor={color} stopOpacity={0.7}/>
-                            </linearGradient>
-                          ))}
+                          <linearGradient id="colorErsparnis" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.4}/>
+                            <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                          </linearGradient>
                         </defs>
-                        <CartesianGrid strokeDasharray="4 4" vertical={false} stroke={darkMode ? '#333' : '#e2e8f0'} />
-                        <XAxis dataKey="year" axisLine={false} tickLine={false} tick={{fill: darkMode ? '#9ca3af' : '#64748b', fontWeight: 'bold', fontSize: 12}} dy={10} />
-                        {/* Width in YAxis vergrößert, Domain flexibel gemacht, damit hohe Hausverbräuche nicht abgeschnitten werden */}
-                        <YAxis axisLine={false} tickLine={false} width={60} domain={[0, 'auto']} tickFormatter={(val) => `${val} kWh`} tick={{fill: darkMode ? '#9ca3af' : '#64748b', fontWeight: 'bold', fontSize: 12}} />
-                        <RechartsTooltip content={<CustomTooltip />} cursor={{fill: darkMode ? '#222' : '#f8fafc'}} />
-                        <Legend iconType="circle" wrapperStyle={{fontWeight: 'bold', paddingTop: '20px', fontSize: '12px'}}/>
-                        
-                        {/* Erzeuger als gestapelte Säulen mit flexibler Max-Breite anstatt starrer barSize */}
-                        {producers.map((p, idx) => (
-                          <Bar key={p} dataKey={p} stackId="a" maxBarSize={40} fill={`url(#grad-${idx % CHART_COLORS.length})`} radius={idx === 0 ? [0,0,6,6] : [0,0,0,0]} />
-                        ))}
-                        
-                        {/* Linien für Eigenverbrauch und Hausverbrauch */}
-                        <Line type="monotone" dataKey="Hausverbrauch" name="Gesamt Hausverbrauch" stroke="#64748b" strokeDasharray="6 6" strokeWidth={3} dot={false} activeDot={{ r: 6 }} />
-                        <Line type="monotone" dataKey="Eigenverbrauch" name="Solar-Eigenverbrauch" stroke="#10b981" strokeWidth={3} dot={{ r: 5, fill: '#10b981', strokeWidth: 2, stroke: darkMode ? '#1a1a1a' : '#fff' }} activeDot={{ r: 7 }} />
-                      </ComposedChart>
+                        <RechartsTooltip content={<SparklineTooltip />} cursor={{ stroke: '#10b981', strokeWidth: 1, strokeDasharray: '4 4' }} />
+                        <Area type="monotone" dataKey="Ersparnis" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorErsparnis)" activeDot={{ r: 6, fill: '#10b981', stroke: '#fff', strokeWidth: 2 }} />
+                      </AreaChart>
                     </ResponsiveContainer>
+                  </div>
+
+                  {/* Sleek List UI */}
+                  <div className="space-y-3 relative z-10">
+                    {[...chartData].reverse().map((data) => (
+                      <div key={data.year} className="group flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 sm:p-5 rounded-2xl bg-slate-50 dark:bg-[#121212] border border-slate-100 dark:border-white/5 hover:border-emerald-500/30 transition-all duration-300 gap-4 sm:gap-6">
+                        
+                        {/* Jahr & Ersparnis */}
+                        <div className="flex items-center gap-4 w-full sm:w-auto">
+                          <div className="bg-white dark:bg-[#1a1a1a] px-4 py-3 rounded-xl shadow-sm border border-slate-200 dark:border-white/10 font-black text-lg sm:text-xl dark:text-white min-w-[80px] text-center">
+                            {data.year}
+                          </div>
+                          <div>
+                            <div className="text-[10px] sm:text-xs text-slate-400 font-bold uppercase tracking-wider mb-0.5">Ersparnis</div>
+                            <div className="font-black text-emerald-500 text-lg sm:text-xl">{formatEuro(data.Ersparnis)}</div>
+                          </div>
+                        </div>
+
+                        {/* Detail-Werte Grid */}
+                        <div className="grid grid-cols-3 gap-2 sm:gap-6 w-full sm:flex-1 sm:px-4">
+                          <div>
+                            <div className="text-[9px] sm:text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Erzeugung</div>
+                            <div className="font-bold text-amber-500 text-sm sm:text-base">{formatKwh(data.Erzeugung)}</div>
+                          </div>
+                          <div>
+                            <div className="text-[9px] sm:text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Hausverbrauch</div>
+                            <div className="font-bold text-blue-400 text-sm sm:text-base">{formatKwh(data.Hausverbrauch)}</div>
+                          </div>
+                          <div>
+                            <div className="text-[9px] sm:text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Autarkie</div>
+                            <div className="font-bold text-slate-700 dark:text-slate-200 text-sm sm:text-base">{data.Autarkie.toFixed(1)}%</div>
+                          </div>
+                        </div>
+
+                        {/* Visueller Progress Bar (nur Desktop) */}
+                        <div className="hidden lg:flex flex-col items-end justify-center w-32 shrink-0">
+                          <div className="w-full bg-slate-200 dark:bg-slate-800 rounded-full h-1.5 mb-1">
+                            <div className="bg-blue-500 h-1.5 rounded-full" style={{width: `${data.Autarkie}%`}}></div>
+                          </div>
+                          <div className="text-[9px] text-slate-400 font-bold uppercase">Autarkie Trend</div>
+                        </div>
+
+                      </div>
+                    ))}
                   </div>
                 </div>
 

@@ -104,6 +104,7 @@
     function App() {
       const [darkMode, setDarkMode] = useState(true);
       const [producers, setProducers] = useState(INITIAL_PRODUCERS);
+      const [activeProducers, setActiveProducers] = useState(INITIAL_PRODUCERS);
       const [solarData, setSolarData] = useState(INITIAL_DATA);
       const [electricityPrice, setElectricityPrice] = useState(0.28);
       const [selectedYear, setSelectedYear] = useState('2026');
@@ -166,6 +167,7 @@
         if (!newProducerName.trim() || producers.includes(newProducerName.trim())) return;
         const name = newProducerName.trim();
         setProducers([...producers, name]);
+        setActiveProducers(prev => [...prev, name]);
         
         setSolarData(prev => {
           const newData = { ...prev };
@@ -186,6 +188,7 @@
 
       const handleRemoveProducer = (producerToRemove) => {
         setProducers(producers.filter(p => p !== producerToRemove));
+        setActiveProducers(prev => prev.filter(p => p !== producerToRemove));
         setSolarData(prev => {
           const newData = JSON.parse(JSON.stringify(prev));
           Object.keys(newData).forEach(year => {
@@ -193,6 +196,13 @@
           });
           return newData;
         });
+        updateTime();
+      };
+
+      const toggleProducerActive = (pName) => {
+        setActiveProducers(prev => 
+          prev.includes(pName) ? prev.filter(name => name !== pName) : [...prev, pName]
+        );
         updateTime();
       };
 
@@ -238,7 +248,7 @@
       };
 
       const handleExport = () => {
-        const dataToExport = { solarData, producers, electricityPrice, hardwareItems };
+        const dataToExport = { solarData, producers, activeProducers, electricityPrice, hardwareItems };
         const blob = new Blob([JSON.stringify(dataToExport, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -257,6 +267,8 @@
             const imported = JSON.parse(e.target.result);
             if (imported.solarData) setSolarData(imported.solarData);
             if (imported.producers) setProducers(imported.producers);
+            if (imported.activeProducers) setActiveProducers(imported.activeProducers);
+            else if (imported.producers) setActiveProducers(imported.producers);
             if (imported.electricityPrice) setElectricityPrice(imported.electricityPrice);
             if (imported.hardwareItems) {
               setHardwareItems(imported.hardwareItems);
@@ -292,9 +304,12 @@
       }, [hardwareItems]);
 
       const currentData = solarData[selectedYear] || { export: 0, consumption: 0, isPartial: false, productions: {} };
+      
       const totalProduction = useMemo(() => {
-        return Object.values(currentData.productions || {}).reduce((sum, val) => sum + (Number(val) || 0), 0);
-      }, [currentData]);
+        return Object.entries(currentData.productions || {}).reduce((sum, [p, val]) => {
+          return activeProducers.includes(p) ? sum + (Number(val) || 0) : sum;
+        }, 0);
+      }, [currentData, activeProducers]);
 
       const selfConsumption = Math.max(0, totalProduction - currentData.export);
       const totalHouseConsumption = currentData.consumption || selfConsumption; 
@@ -319,7 +334,9 @@
         let totalFullYearSavings = 0;
 
         Object.values(solarData).forEach(yearData => {
-          const prod = Object.values(yearData.productions || {}).reduce((sum, val) => sum + (Number(val) || 0), 0);
+          const prod = Object.entries(yearData.productions || {}).reduce((sum, [p, val]) => {
+            return activeProducers.includes(p) ? sum + (Number(val) || 0) : sum;
+          }, 0);
           const cons = Math.max(0, prod - yearData.export);
           const sav = cons * electricityPrice;
           
@@ -354,7 +371,7 @@
           remainingCost,
           avgYearlySavings
         };
-      }, [solarData, electricityPrice, totalHardwareCost]);
+      }, [solarData, electricityPrice, totalHardwareCost, activeProducers]);
 
       const isPartial = currentData.isPartial;
       const seasonalMultiplier = isPartial ? 3.2 : 1; 
@@ -363,7 +380,9 @@
 
       const chartData = Object.keys(solarData).sort().map(year => {
         const d = solarData[year];
-        const totalProd = Object.values(d.productions).reduce((a, b) => a + Number(b), 0);
+        const totalProd = Object.entries(d.productions).reduce((a, [p, b]) => {
+          return activeProducers.includes(p) ? a + Number(b) : a;
+        }, 0);
         const consumed = Math.max(0, totalProd - d.export);
         const hausverbrauch = d.consumption || consumed; 
         const autarkie = hausverbrauch > 0 ? (consumed / hausverbrauch) * 100 : 0;
@@ -578,29 +597,40 @@
                       <div className="text-amber-600 dark:text-amber-500/80 font-bold text-xs sm:text-sm relative z-10 mb-2">≙ {formatEuro(totalProduction * electricityPrice)} Wert</div>
                       <div className="text-slate-500 dark:text-slate-400 font-bold text-[10px] sm:text-xs uppercase tracking-wider mt-1 relative z-10 flex items-center justify-center">
                         Gesamte Erzeugung
-                        <InfoTooltip text="Die Summe aller Werte aus deinen Hardware Quellen unten. Das ist die Bruttoausbeute deiner gesamten Anlage." />
+                        <InfoTooltip text="Die Summe aller Werte aus deinen aktiven Hardware Quellen unten. Geräte, die du deaktivierst, fließen hier nicht mehr mit rein." />
                       </div>
                       
                       <div className="mt-4 sm:mt-6 space-y-2 sm:space-y-3 relative z-10">
                         {producers.map((p, idx) => {
                           const pValue = currentData.productions[p] || 0;
-                          const pShare = totalProduction > 0 ? ((pValue / totalProduction) * 100).toFixed(1) : 0;
+                          const isActive = activeProducers.includes(p);
+                          const pShare = totalProduction > 0 && isActive ? ((pValue / totalProduction) * 100).toFixed(1) : 0;
+                          
                           return (
-                            <div key={p} className="flex justify-between items-center bg-slate-50 dark:bg-[#1a1a1a] p-2 sm:p-2.5 px-3 sm:px-4 rounded-xl border border-slate-200 dark:border-white/5 shadow-sm">
+                            <div key={p} className={`flex justify-between items-center bg-slate-50 dark:bg-[#1a1a1a] p-2 sm:p-2.5 px-3 sm:px-4 rounded-xl border transition-all duration-300 ${isActive ? 'border-slate-200 dark:border-white/5 shadow-sm' : 'border-transparent opacity-50 grayscale'}`}>
                               <div className="flex flex-col items-start truncate mr-2">
-                                <span className="text-[10px] sm:text-xs md:text-sm font-bold dark:text-slate-300 truncate">{p}</span>
-                                <span className="text-[9px] text-slate-400 font-bold">{pShare}% Anteil</span>
+                                <div className="flex items-center gap-2">
+                                  <button onClick={() => toggleProducerActive(p)} className={`w-7 h-4 rounded-full flex items-center transition-colors px-0.5 shrink-0 ${isActive ? 'bg-amber-500' : 'bg-slate-300 dark:bg-slate-600'}`}>
+                                    <div className={`w-3 h-3 bg-white rounded-full shadow-sm transform transition-transform ${isActive ? 'translate-x-3' : 'translate-x-0'}`} />
+                                  </button>
+                                  <span className={`text-[10px] sm:text-xs md:text-sm font-bold dark:text-slate-300 truncate ${!isActive && 'line-through'}`}>{p}</span>
+                                </div>
+                                <span className={`text-[9px] font-bold mt-1 ml-9 ${isActive ? 'text-slate-400' : 'text-slate-500'}`}>
+                                  {isActive ? `${pShare}% Anteil` : 'Deaktiviert'}
+                                </span>
                               </div>
                               <div className="flex flex-col items-end">
                                 <div className="flex items-center">
                                   <input 
-                                    type="number" className="w-14 sm:w-16 md:w-20 bg-transparent text-right font-black text-amber-600 dark:text-amber-400 focus:outline-none text-sm sm:text-base md:text-lg"
+                                    type="number" className={`w-14 sm:w-16 md:w-20 bg-transparent text-right font-black focus:outline-none text-sm sm:text-base md:text-lg transition-colors ${isActive ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400'}`}
                                     value={pValue}
                                     onChange={(e) => handleUpdateProduction(selectedYear, p, e.target.value)}
                                   />
                                   <span className="text-[10px] sm:text-xs text-slate-400 ml-1">kWh</span>
                                 </div>
-                                <span className="text-[9px] sm:text-[10px] text-amber-600/70 dark:text-amber-500/60 font-bold">({formatEuro(pValue * electricityPrice)})</span>
+                                <span className={`text-[9px] sm:text-[10px] font-bold transition-colors ${isActive ? 'text-amber-600/70 dark:text-amber-500/60' : 'text-slate-400'}`}>
+                                  ({formatEuro(pValue * electricityPrice)})
+                                </span>
                               </div>
                             </div>
                           )

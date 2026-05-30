@@ -63,6 +63,7 @@
       Upload: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>,
       Plus: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>,
       Trash: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>,
+      Edit: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>,
       TrendingUp: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>,
       Car: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/></svg>,
       Tv: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="15" x="2" y="7" rx="2" ry="2"/><polyline points="17 2 12 7 7 2"/></svg>,
@@ -75,7 +76,9 @@
       Target: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>,
       Activity: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>,
       Battery: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="16" height="10" rx="2" ry="2"></rect><line x1="22" y1="11" x2="22" y2="13"></line></svg>,
-      Info: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+      Info: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>,
+      Check: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>,
+      X: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
     };
 
     const Icon = ({ name, size = 24, className = "" }) => {
@@ -96,15 +99,14 @@
 
     const INITIAL_PRODUCERS = ['Garagendach', 'EcoFlow'];
     const INITIAL_DATA = {
-      2025: { export: 120, consumption: 3500, isPartial: false, productions: { Garagendach: 950, EcoFlow: 280 } },
-      2026: { export: 33, consumption: 1500, isPartial: true, productions: { Garagendach: 401, EcoFlow: 131 } }
+      2025: { export: 120, consumption: 3500, isPartial: false, productions: { Garagendach: 950, EcoFlow: 280 }, activeProducers: ['Garagendach', 'EcoFlow'] },
+      2026: { export: 33, consumption: 1500, isPartial: true, productions: { Garagendach: 401, EcoFlow: 131 }, activeProducers: ['Garagendach', 'EcoFlow'] }
     };
     const CO2_FACTOR = 0.434;
 
     function App() {
       const [darkMode, setDarkMode] = useState(true);
       const [producers, setProducers] = useState(INITIAL_PRODUCERS);
-      const [activeProducers, setActiveProducers] = useState(INITIAL_PRODUCERS);
       const [solarData, setSolarData] = useState(INITIAL_DATA);
       const [electricityPrice, setElectricityPrice] = useState(0.28);
       const [selectedYear, setSelectedYear] = useState('2026');
@@ -116,6 +118,7 @@
       const [newHwName, setNewHwName] = useState('');
       const [newHwDate, setNewHwDate] = useState('');
       const [newHwPrice, setNewHwPrice] = useState('');
+      const [editingHwId, setEditingHwId] = useState(null);
       
       const [showAddYearForm, setShowAddYearForm] = useState(false);
       const [showProducerManager, setShowProducerManager] = useState(false);
@@ -147,18 +150,47 @@
         }
       }, [darkMode]);
 
+      // Hilfsfunktion: Gibt die aktiven Produzenten für ein bestimmtes Jahr zurück (oder Fallback auf alle)
+      const getActiveProducers = (yearData) => yearData.activeProducers || producers;
+
       const handleAddHardware = (e) => {
         e.preventDefault();
         if (!newHwName.trim() || !newHwPrice) return;
-        setHardwareItems(prev => [...prev, { id: Date.now(), name: newHwName.trim(), price: Number(newHwPrice), date: newHwDate }]);
+        
+        if (editingHwId) {
+          setHardwareItems(prev => prev.map(item => 
+            item.id === editingHwId 
+              ? { ...item, name: newHwName.trim(), price: Number(newHwPrice), date: newHwDate } 
+              : item
+          ));
+          setEditingHwId(null);
+        } else {
+          setHardwareItems(prev => [...prev, { id: Date.now(), name: newHwName.trim(), price: Number(newHwPrice), date: newHwDate }]);
+        }
+        
         setNewHwName('');
         setNewHwPrice('');
         setNewHwDate('');
         updateTime();
       };
 
+      const handleEditHardware = (item) => {
+        setNewHwName(item.name);
+        setNewHwDate(item.date || '');
+        setNewHwPrice(item.price.toString());
+        setEditingHwId(item.id);
+      };
+
+      const handleCancelEditHardware = () => {
+        setNewHwName('');
+        setNewHwDate('');
+        setNewHwPrice('');
+        setEditingHwId(null);
+      };
+
       const handleRemoveHardware = (id) => {
         setHardwareItems(prev => prev.filter(item => item.id !== id));
+        if (editingHwId === id) handleCancelEditHardware();
         updateTime();
       };
 
@@ -167,13 +199,13 @@
         if (!newProducerName.trim() || producers.includes(newProducerName.trim())) return;
         const name = newProducerName.trim();
         setProducers([...producers, name]);
-        setActiveProducers(prev => [...prev, name]);
         
         setSolarData(prev => {
           const newData = { ...prev };
           Object.keys(newData).forEach(year => {
             if(!newData[year].productions) newData[year].productions = {};
             newData[year].productions[name] = 0;
+            newData[year].activeProducers = [...(newData[year].activeProducers || producers), name];
           });
           return newData;
         });
@@ -188,11 +220,13 @@
 
       const handleRemoveProducer = (producerToRemove) => {
         setProducers(producers.filter(p => p !== producerToRemove));
-        setActiveProducers(prev => prev.filter(p => p !== producerToRemove));
         setSolarData(prev => {
           const newData = JSON.parse(JSON.stringify(prev));
           Object.keys(newData).forEach(year => {
             delete newData[year].productions[producerToRemove];
+            if (newData[year].activeProducers) {
+              newData[year].activeProducers = newData[year].activeProducers.filter(p => p !== producerToRemove);
+            }
           });
           return newData;
         });
@@ -200,9 +234,21 @@
       };
 
       const toggleProducerActive = (pName) => {
-        setActiveProducers(prev => 
-          prev.includes(pName) ? prev.filter(name => name !== pName) : [...prev, pName]
-        );
+        setSolarData(prev => {
+          const yearData = prev[selectedYear];
+          const currentActive = getActiveProducers(yearData);
+          const isActive = currentActive.includes(pName);
+          
+          return {
+            ...prev,
+            [selectedYear]: {
+              ...yearData,
+              activeProducers: isActive 
+                ? currentActive.filter(name => name !== pName) 
+                : [...currentActive, pName]
+            }
+          };
+        });
         updateTime();
       };
 
@@ -248,7 +294,7 @@
       };
 
       const handleExport = () => {
-        const dataToExport = { solarData, producers, activeProducers, electricityPrice, hardwareItems };
+        const dataToExport = { solarData, producers, electricityPrice, hardwareItems };
         const blob = new Blob([JSON.stringify(dataToExport, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -265,11 +311,21 @@
         reader.onload = (e) => {
           try {
             const imported = JSON.parse(e.target.result);
-            if (imported.solarData) setSolarData(imported.solarData);
+            
+            // Abwärtskompatibilität für activeProducers herstellen
+            if (imported.solarData) {
+              const migratedSolarData = { ...imported.solarData };
+              Object.keys(migratedSolarData).forEach(year => {
+                if (!migratedSolarData[year].activeProducers) {
+                  migratedSolarData[year].activeProducers = imported.activeProducers || imported.producers || [];
+                }
+              });
+              setSolarData(migratedSolarData);
+            }
+            
             if (imported.producers) setProducers(imported.producers);
-            if (imported.activeProducers) setActiveProducers(imported.activeProducers);
-            else if (imported.producers) setActiveProducers(imported.producers);
             if (imported.electricityPrice) setElectricityPrice(imported.electricityPrice);
+            
             if (imported.hardwareItems) {
               setHardwareItems(imported.hardwareItems);
             } else if (imported.hardwareCost) {
@@ -291,7 +347,8 @@
             export: Number(newYearForm.export),
             consumption: Number(newYearForm.consumption),
             isPartial: newYearForm.isPartial,
-            productions: { ...newYearForm.productions }
+            productions: { ...newYearForm.productions },
+            activeProducers: [...producers] // Neues Jahr startet mit allen Produzenten
           }
         }));
         setSelectedYear(newYearForm.year.toString());
@@ -303,13 +360,14 @@
         return hardwareItems.reduce((acc, curr) => acc + Number(curr.price), 0);
       }, [hardwareItems]);
 
-      const currentData = solarData[selectedYear] || { export: 0, consumption: 0, isPartial: false, productions: {} };
+      const currentData = solarData[selectedYear] || { export: 0, consumption: 0, isPartial: false, productions: {}, activeProducers: [] };
+      const currentActiveProducers = getActiveProducers(currentData);
       
       const totalProduction = useMemo(() => {
         return Object.entries(currentData.productions || {}).reduce((sum, [p, val]) => {
-          return activeProducers.includes(p) ? sum + (Number(val) || 0) : sum;
+          return currentActiveProducers.includes(p) ? sum + (Number(val) || 0) : sum;
         }, 0);
-      }, [currentData, activeProducers]);
+      }, [currentData, currentActiveProducers]);
 
       const selfConsumption = Math.max(0, totalProduction - currentData.export);
       const totalHouseConsumption = currentData.consumption || selfConsumption; 
@@ -334,8 +392,9 @@
         let totalFullYearSavings = 0;
 
         Object.values(solarData).forEach(yearData => {
+          const active = getActiveProducers(yearData);
           const prod = Object.entries(yearData.productions || {}).reduce((sum, [p, val]) => {
-            return activeProducers.includes(p) ? sum + (Number(val) || 0) : sum;
+            return active.includes(p) ? sum + (Number(val) || 0) : sum;
           }, 0);
           const cons = Math.max(0, prod - yearData.export);
           const sav = cons * electricityPrice;
@@ -371,7 +430,7 @@
           remainingCost,
           avgYearlySavings
         };
-      }, [solarData, electricityPrice, totalHardwareCost, activeProducers]);
+      }, [solarData, electricityPrice, totalHardwareCost]);
 
       const isPartial = currentData.isPartial;
       const seasonalMultiplier = isPartial ? 3.2 : 1; 
@@ -380,8 +439,9 @@
 
       const chartData = Object.keys(solarData).sort().map(year => {
         const d = solarData[year];
+        const active = getActiveProducers(d);
         const totalProd = Object.entries(d.productions).reduce((a, [p, b]) => {
-          return activeProducers.includes(p) ? a + Number(b) : a;
+          return active.includes(p) ? a + Number(b) : a;
         }, 0);
         const consumed = Math.max(0, totalProd - d.export);
         const hausverbrauch = d.consumption || consumed; 
@@ -597,13 +657,13 @@
                       <div className="text-amber-600 dark:text-amber-500/80 font-bold text-xs sm:text-sm relative z-10 mb-2">≙ {formatEuro(totalProduction * electricityPrice)} Wert</div>
                       <div className="text-slate-500 dark:text-slate-400 font-bold text-[10px] sm:text-xs uppercase tracking-wider mt-1 relative z-10 flex items-center justify-center">
                         Gesamte Erzeugung
-                        <InfoTooltip text="Die Summe aller Werte aus deinen aktiven Hardware Quellen unten. Geräte, die du deaktivierst, fließen hier nicht mehr mit rein." />
+                        <InfoTooltip text="Die Summe aller Werte aus deinen aktiven Hardware Quellen für dieses Jahr. Geräte, die du im jeweiligen Jahr deaktivierst, fließen hier nicht mehr in die Kalkulation mit rein." />
                       </div>
                       
                       <div className="mt-4 sm:mt-6 space-y-2 sm:space-y-3 relative z-10">
                         {producers.map((p, idx) => {
                           const pValue = currentData.productions[p] || 0;
-                          const isActive = activeProducers.includes(p);
+                          const isActive = currentActiveProducers.includes(p);
                           const pShare = totalProduction > 0 && isActive ? ((pValue / totalProduction) * 100).toFixed(1) : 0;
                           
                           return (
@@ -616,7 +676,7 @@
                                   <span className={`text-[10px] sm:text-xs md:text-sm font-bold dark:text-slate-300 truncate ${!isActive && 'line-through'}`}>{p}</span>
                                 </div>
                                 <span className={`text-[9px] font-bold mt-1 ml-9 ${isActive ? 'text-slate-400' : 'text-slate-500'}`}>
-                                  {isActive ? `${pShare}% Anteil` : 'Deaktiviert'}
+                                  {isActive ? `${pShare}% Anteil` : 'Für dieses Jahr deaktiviert'}
                                 </span>
                               </div>
                               <div className="flex flex-col items-end">
@@ -625,6 +685,7 @@
                                     type="number" className={`w-14 sm:w-16 md:w-20 bg-transparent text-right font-black focus:outline-none text-sm sm:text-base md:text-lg transition-colors ${isActive ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400'}`}
                                     value={pValue}
                                     onChange={(e) => handleUpdateProduction(selectedYear, p, e.target.value)}
+                                    disabled={!isActive}
                                   />
                                   <span className="text-[10px] sm:text-xs text-slate-400 ml-1">kWh</span>
                                 </div>
@@ -778,34 +839,47 @@
                           <div className="bg-black/40 border border-white/5 rounded-2xl p-3 sm:p-4 space-y-3 animate-in fade-in slide-in-from-top-2">
                             <div className="space-y-2 mb-3">
                               {hardwareItems.map(item => (
-                                <div key={item.id} className="flex justify-between items-center bg-white/5 p-2 rounded-xl border border-white/5">
+                                <div key={item.id} className={`flex justify-between items-center bg-white/5 p-2 rounded-xl border transition-colors ${editingHwId === item.id ? 'border-amber-500 shadow-md' : 'border-white/5'}`}>
                                   <div className="flex flex-col overflow-hidden pr-2">
                                     <span className="text-xs font-bold text-slate-200 truncate">{item.name}</span>
                                     <span className="text-[10px] text-slate-500">{item.date ? new Date(item.date).toLocaleDateString('de-DE') : 'Kein Datum'}</span>
                                   </div>
-                                  <div className="flex items-center gap-3 shrink-0">
-                                    <span className="text-sm font-black text-amber-400">{formatEuro(item.price)}</span>
-                                    <button onClick={() => handleRemoveHardware(item.id)} className="text-slate-500 hover:text-red-500 transition-colors p-1"><Icon name="Trash" size={14}/></button>
+                                  <div className="flex items-center gap-1 shrink-0">
+                                    <span className="text-sm font-black text-amber-400 mr-2">{formatEuro(item.price)}</span>
+                                    <button onClick={() => handleEditHardware(item)} className="text-slate-500 hover:text-blue-400 transition-colors p-1" title="Bearbeiten"><Icon name="Edit" size={14}/></button>
+                                    <button onClick={() => handleRemoveHardware(item.id)} className="text-slate-500 hover:text-red-500 transition-colors p-1" title="Löschen"><Icon name="Trash" size={14}/></button>
                                   </div>
                                 </div>
                               ))}
                             </div>
                             
-                            <form onSubmit={handleAddHardware} className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 border-t border-white/10">
+                            <form onSubmit={handleAddHardware} className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 border-t border-white/10 relative">
+                              {editingHwId && (
+                                <div className="absolute -top-7 left-0 text-[10px] text-amber-500 font-bold flex items-center gap-1">
+                                  <Icon name="Edit" size={12}/> Bearbeitungsmodus
+                                </div>
+                              )}
                               <input 
-                                type="text" placeholder="Bezeichnung (z.B. Wechselrichter)" className="w-full bg-white/5 border border-white/10 rounded-lg p-2 text-xs text-white focus:border-amber-400 focus:outline-none sm:col-span-2" 
+                                type="text" placeholder="Bezeichnung (z.B. Wechselrichter)" className={`w-full bg-white/5 border rounded-lg p-2 text-xs text-white focus:outline-none sm:col-span-2 ${editingHwId ? 'border-amber-500' : 'border-white/10 focus:border-amber-400'}`}
                                 value={newHwName} onChange={e => setNewHwName(e.target.value)} required 
                               />
                               <input 
-                                type="date" className="w-full bg-white/5 border border-white/10 rounded-lg p-2 text-xs text-white focus:border-amber-400 focus:outline-none" 
+                                type="date" className={`w-full bg-white/5 border rounded-lg p-2 text-xs text-white focus:outline-none ${editingHwId ? 'border-amber-500' : 'border-white/10 focus:border-amber-400'}`} 
                                 value={newHwDate} onChange={e => setNewHwDate(e.target.value)} required
                               />
                               <div className="flex gap-2">
                                 <input 
-                                  type="number" step="0.01" placeholder="Preis €" className="w-full bg-white/5 border border-white/10 rounded-lg p-2 text-xs text-white focus:border-amber-400 focus:outline-none" 
+                                  type="number" step="0.01" placeholder="Preis €" className={`w-full bg-white/5 border rounded-lg p-2 text-xs text-white focus:outline-none ${editingHwId ? 'border-amber-500' : 'border-white/10 focus:border-amber-400'}`}
                                   value={newHwPrice} onChange={e => setNewHwPrice(e.target.value)} required 
                                 />
-                                <button type="submit" className="bg-amber-500 text-black px-3 rounded-lg hover:bg-amber-400 transition-colors shrink-0"><Icon name="Plus" size={16}/></button>
+                                {editingHwId ? (
+                                  <>
+                                    <button type="submit" className="bg-emerald-500 text-black px-3 rounded-lg hover:bg-emerald-400 transition-colors shrink-0" title="Speichern"><Icon name="Check" size={16}/></button>
+                                    <button type="button" onClick={handleCancelEditHardware} className="bg-slate-700 text-white px-3 rounded-lg hover:bg-slate-600 transition-colors shrink-0" title="Abbrechen"><Icon name="X" size={16}/></button>
+                                  </>
+                                ) : (
+                                  <button type="submit" className="bg-amber-500 text-black px-3 rounded-lg hover:bg-amber-400 transition-colors shrink-0" title="Hinzufügen"><Icon name="Plus" size={16}/></button>
+                                )}
                               </div>
                             </form>
                           </div>

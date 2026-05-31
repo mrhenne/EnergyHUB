@@ -45,7 +45,10 @@
     };
 
     const { useState, useMemo, useRef, useEffect } = React;
-    const { AreaChart, Area, XAxis, Tooltip: RechartsTooltip, ResponsiveContainer } = window.Recharts;
+    const { 
+      AreaChart, Area, XAxis, YAxis, Tooltip: RechartsTooltip, ResponsiveContainer, 
+      BarChart, Bar, CartesianGrid, Legend, PieChart, Pie, Cell 
+    } = window.Recharts;
 
     const Icons = {
       Sun: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>,
@@ -79,8 +82,13 @@
       Info: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>,
       Check: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>,
       X: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
-      Link: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+      Link: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>,
+      List: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>,
+      BarChart: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>,
+      PieChart: <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
     };
+
+    const CHART_COLORS = ['#f59e0b', '#3b82f6', '#10b981', '#ef4444', '#8b5cf6', '#ec4899'];
 
     const Icon = ({ name, size = 24, className = "" }) => {
       const svg = Icons[name];
@@ -111,6 +119,7 @@
       const [solarData, setSolarData] = useState(INITIAL_DATA);
       const [electricityPrice, setElectricityPrice] = useState(0.28);
       const [selectedYear, setSelectedYear] = useState('2026');
+      const [matrixView, setMatrixView] = useState('list'); // 'list', 'bar', 'pie'
       
       const [hardwareItems, setHardwareItems] = useState([
         { id: 1, name: 'Initiales Setup', price: 1500, date: '2025-01-15' }
@@ -454,7 +463,14 @@
         const remainingCost = Math.max(0, totalHardwareCost - totalAllTimeSavings);
         const yearsToAmortize = remainingCost > 0 ? (remainingCost / avgYearlySavings) : 0;
         const currentYearNum = new Date().getFullYear();
-        const amortizationYear = currentYearNum + Math.ceil(yearsToAmortize);
+        
+        const daysToAmortize = avgYearlySavings > 0 ? (remainingCost / avgYearlySavings) * 365.25 : 0;
+        const exactBreakEvenDate = new Date();
+        exactBreakEvenDate.setDate(exactBreakEvenDate.getDate() + daysToAmortize);
+        
+        const breakEvenText = remainingCost <= 0 ? "Bereits erreicht" :
+                              avgYearlySavings > 0 ? exactBreakEvenDate.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' }) :
+                              "Nie (zu wenig Ersparnis)";
 
         return {
           totalAllTimeSavings,
@@ -462,7 +478,7 @@
           totalAllTimeConsumption,
           totalAllTimeHouseConsumption,
           roiPercentage: totalHardwareCost > 0 ? Math.min((totalAllTimeSavings / totalHardwareCost) * 100, 100) : 100,
-          amortizationYear,
+          exactBreakEvenText: breakEvenText,
           remainingCost,
           avgYearlySavings
         };
@@ -498,14 +514,44 @@
         return dataPoint;
       });
 
+      const pieDataProducers = producers.map(p => ({
+         name: p,
+         value: Object.values(solarData).reduce((sum, d) => sum + ((d.activeProducers||producers).includes(p) ? Number(d.productions[p] || 0) : 0), 0)
+      })).filter(d => d.value > 0);
+
+      const pieDataUsage = [
+         { name: 'Eigenverbrauch', value: globalStats.totalAllTimeConsumption },
+         { name: 'Ins Netz verschenkt', value: globalStats.totalAllTimeExport }
+      ];
+
       const formatEuro = (val) => `${Number(val).toFixed(2)} €`;
       const formatKwh = (val) => `${Number(val).toFixed(0)} kWh`;
 
-      const SparklineTooltip = ({ active, payload, label }) => {
+      const CustomTooltip = ({ active, payload, label }) => {
         if (active && payload && payload.length) {
           return (
-            <div className="bg-white dark:bg-slate-800 text-slate-800 dark:text-white text-xs font-bold py-1 px-3 rounded-lg shadow-xl border border-slate-200 dark:border-white/10">
-              {label}: <span className="text-emerald-500">{formatEuro(payload[0].value)}</span>
+            <div className="bg-white dark:bg-slate-800 text-slate-800 dark:text-white text-xs font-bold py-2 px-3 rounded-lg shadow-xl border border-slate-200 dark:border-white/10">
+              <div className="mb-1 border-b border-slate-200 dark:border-slate-700 pb-1">{label}</div>
+              {payload.map((entry, index) => (
+                <div key={index} style={{ color: entry.color }} className="flex justify-between gap-4 mt-1">
+                  <span>{entry.name}:</span>
+                  <span>{entry.dataKey === 'Ersparnis' ? formatEuro(entry.value) : formatKwh(entry.value)}</span>
+                </div>
+              ))}
+            </div>
+          );
+        }
+        return null;
+      };
+
+      const CustomPieTooltip = ({ active, payload }) => {
+        if (active && payload && payload.length) {
+          return (
+            <div className="bg-white dark:bg-slate-800 text-slate-800 dark:text-white text-xs font-bold py-2 px-3 rounded-lg shadow-xl border border-slate-200 dark:border-white/10">
+              <div style={{ color: payload[0].payload.fill }} className="flex justify-between gap-4">
+                <span>{payload[0].name}:</span>
+                <span>{formatKwh(payload[0].value)}</span>
+              </div>
             </div>
           );
         }
@@ -672,7 +718,7 @@
               
               <div className="xl:col-span-2 space-y-6">
                 
-                {/* NEUE ENERGIEFLUSS ARCHITEKTUR MIT SPEICHER-STRANG */}
+                {/* ENERGIEFLUSS ARCHITEKTUR */}
                 <div className="bg-gradient-to-b from-slate-100 to-slate-200 dark:from-[#1a1a1a] dark:to-[#121212] rounded-3xl p-4 sm:p-6 md:p-10 border border-slate-300 dark:border-white/5 shadow-inner relative overflow-hidden flex flex-col items-center">
                   <div className="flex flex-col sm:flex-row justify-between w-full items-center mb-6 gap-3">
                     <h3 className="text-slate-500 dark:text-slate-400 font-black uppercase tracking-wider text-xs sm:text-sm flex items-center text-center sm:text-left">
@@ -994,9 +1040,9 @@
                           </div>
                         ) : (
                           <>
-                            <div className="text-slate-500 font-bold text-[10px] sm:text-xs uppercase tracking-wider">Break Even Point erreicht in</div>
+                            <div className="text-slate-500 font-bold text-[10px] sm:text-xs uppercase tracking-wider">Break Even Point erreicht im</div>
                             <div className="text-2xl sm:text-3xl font-black text-white mt-1 drop-shadow-md">
-                              {globalStats.amortizationYear}
+                              {globalStats.exactBreakEvenText}
                             </div>
                           </>
                         )}
@@ -1005,74 +1051,136 @@
                   </div>
                 </div>
 
-                {/* NEUE PERFORMANCE MATRIX */}
+                {/* PERFORMANCE MATRIX MIT VIEW TOGGLES */}
                 <div className="bg-white dark:bg-[#1a1a1a] rounded-3xl shadow-lg border border-slate-200 dark:border-white/5 p-4 sm:p-6 md:p-8 relative overflow-hidden">
-                  <h3 className="text-lg sm:text-xl font-black mb-6 sm:mb-8 flex items-center dark:text-white">
-                    <Icon name="Activity" className="text-emerald-500 mr-2" size={24}/>
-                    Performance Matrix
-                    <InfoTooltip text="Deine chronologische Erfolgsstory. Die Fläche oben zeigt den Trend deiner Ersparnisse, die Liste unten liefert dir die puren Fakten pro Jahr." />
-                  </h3>
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 sm:mb-8 gap-4">
+                    <h3 className="text-lg sm:text-xl font-black flex items-center dark:text-white">
+                      <Icon name="Activity" className="text-emerald-500 mr-2" size={24}/>
+                      Performance Matrix
+                      <InfoTooltip text="Deine Analyse Zentrale. Wechsle zwischen dem klassischen Verlauf, dem Jahresvergleich und der Gesamtverteilung, um Engpässe zu erkennen." />
+                    </h3>
+                    
+                    <div className="flex bg-slate-100 dark:bg-[#121212] p-1 rounded-xl border border-slate-200 dark:border-white/5">
+                      <button onClick={() => setMatrixView('list')} className={`p-2 rounded-lg transition-colors flex items-center gap-1 ${matrixView === 'list' ? 'bg-white dark:bg-[#222] shadow-sm text-emerald-500 font-bold' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`} title="Verlauf & Fakten"><Icon name="List" size={18}/></button>
+                      <button onClick={() => setMatrixView('bar')} className={`p-2 rounded-lg transition-colors flex items-center gap-1 ${matrixView === 'bar' ? 'bg-white dark:bg-[#222] shadow-sm text-blue-500 font-bold' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`} title="Jahresvergleich"><Icon name="BarChart" size={18}/></button>
+                      <button onClick={() => setMatrixView('pie')} className={`p-2 rounded-lg transition-colors flex items-center gap-1 ${matrixView === 'pie' ? 'bg-white dark:bg-[#222] shadow-sm text-amber-500 font-bold' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'}`} title="Verteilung"><Icon name="PieChart" size={18}/></button>
+                    </div>
+                  </div>
                   
-                  {/* Slim Trend AreaChart */}
-                  <div className="h-24 sm:h-32 w-full mb-6 opacity-90">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={chartData}>
-                        <defs>
-                          <linearGradient id="colorErsparnis" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.4}/>
-                            <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                          </linearGradient>
-                        </defs>
-                        <RechartsTooltip content={<SparklineTooltip />} cursor={{ stroke: '#10b981', strokeWidth: 1, strokeDasharray: '4 4' }} />
-                        <Area type="monotone" dataKey="Ersparnis" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorErsparnis)" activeDot={{ r: 6, fill: '#10b981', stroke: '#fff', strokeWidth: 2 }} />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  </div>
-
-                  {/* Sleek List UI */}
-                  <div className="space-y-3 relative z-10">
-                    {[...chartData].reverse().map((data) => (
-                      <div key={data.year} className="group flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 sm:p-5 rounded-2xl bg-slate-50 dark:bg-[#121212] border border-slate-100 dark:border-white/5 hover:border-emerald-500/30 transition-all duration-300 gap-4 sm:gap-6">
-                        
-                        {/* Jahr & Ersparnis */}
-                        <div className="flex items-center gap-4 w-full sm:w-auto">
-                          <div className="bg-white dark:bg-[#1a1a1a] px-4 py-3 rounded-xl shadow-sm border border-slate-200 dark:border-white/10 font-black text-lg sm:text-xl dark:text-white min-w-[80px] text-center">
-                            {data.year}
-                          </div>
-                          <div>
-                            <div className="text-[10px] sm:text-xs text-slate-400 font-bold uppercase tracking-wider mb-0.5">Ersparnis</div>
-                            <div className="font-black text-emerald-500 text-lg sm:text-xl">{formatEuro(data.Ersparnis)}</div>
-                          </div>
-                        </div>
-
-                        {/* Detail-Werte Grid */}
-                        <div className="grid grid-cols-3 gap-2 sm:gap-6 w-full sm:flex-1 sm:px-4">
-                          <div>
-                            <div className="text-[9px] sm:text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Erzeugung</div>
-                            <div className="font-bold text-amber-500 text-sm sm:text-base">{formatKwh(data.Erzeugung)}</div>
-                          </div>
-                          <div>
-                            <div className="text-[9px] sm:text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Hausverbrauch</div>
-                            <div className="font-bold text-blue-400 text-sm sm:text-base leading-none">{formatKwh(data.Hausverbrauch)}</div>
-                            <div className="text-[8px] sm:text-[9px] text-slate-500 font-bold mt-1">Normal: {formatEuro(data.Hausverbrauch * electricityPrice)}</div>
-                          </div>
-                          <div>
-                            <div className="text-[9px] sm:text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Autarkie</div>
-                            <div className="font-bold text-slate-700 dark:text-slate-200 text-sm sm:text-base">{data.Autarkie.toFixed(1)}%</div>
-                          </div>
-                        </div>
-
-                        {/* Visueller Progress Bar */}
-                        <div className="hidden lg:flex flex-col items-end justify-center w-32 shrink-0">
-                          <div className="w-full bg-slate-200 dark:bg-slate-800 rounded-full h-1.5 mb-1">
-                            <div className="bg-blue-500 h-1.5 rounded-full" style={{width: `${data.Autarkie}%`}}></div>
-                          </div>
-                          <div className="text-[9px] text-slate-400 font-bold uppercase">Autarkie Trend</div>
-                        </div>
-
+                  {/* VIEW 1: CLASSIC LIST & TREND */}
+                  {matrixView === 'list' && (
+                    <div className="animate-in fade-in duration-300">
+                      <div className="h-24 sm:h-32 w-full mb-6 opacity-90">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <AreaChart data={chartData}>
+                            <defs>
+                              <linearGradient id="colorErsparnis" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#10b981" stopOpacity={0.4}/>
+                                <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                              </linearGradient>
+                            </defs>
+                            <RechartsTooltip content={<CustomTooltip />} cursor={{ stroke: '#10b981', strokeWidth: 1, strokeDasharray: '4 4' }} />
+                            <Area type="monotone" dataKey="Ersparnis" stroke="#10b981" strokeWidth={3} fillOpacity={1} fill="url(#colorErsparnis)" activeDot={{ r: 6, fill: '#10b981', stroke: '#fff', strokeWidth: 2 }} />
+                          </AreaChart>
+                        </ResponsiveContainer>
                       </div>
-                    ))}
-                  </div>
+
+                      <div className="space-y-3 relative z-10">
+                        {[...chartData].reverse().map((data) => (
+                          <div key={data.year} className="group flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 sm:p-5 rounded-2xl bg-slate-50 dark:bg-[#121212] border border-slate-100 dark:border-white/5 hover:border-emerald-500/30 transition-all duration-300 gap-4 sm:gap-6">
+                            <div className="flex items-center gap-4 w-full sm:w-auto">
+                              <div className="bg-white dark:bg-[#1a1a1a] px-4 py-3 rounded-xl shadow-sm border border-slate-200 dark:border-white/10 font-black text-lg sm:text-xl dark:text-white min-w-[80px] text-center">
+                                {data.year}
+                              </div>
+                              <div>
+                                <div className="text-[10px] sm:text-xs text-slate-400 font-bold uppercase tracking-wider mb-0.5">Ersparnis</div>
+                                <div className="font-black text-emerald-500 text-lg sm:text-xl">{formatEuro(data.Ersparnis)}</div>
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-3 gap-2 sm:gap-6 w-full sm:flex-1 sm:px-4">
+                              <div>
+                                <div className="text-[9px] sm:text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Erzeugung</div>
+                                <div className="font-bold text-amber-500 text-sm sm:text-base">{formatKwh(data.Erzeugung)}</div>
+                              </div>
+                              <div>
+                                <div className="text-[9px] sm:text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Hausbedarf</div>
+                                <div className="font-bold text-blue-400 text-sm sm:text-base leading-none">{formatKwh(data.Hausverbrauch)}</div>
+                                <div className="text-[8px] sm:text-[9px] text-slate-500 font-bold mt-1">Normal: {formatEuro(data.Hausverbrauch * electricityPrice)}</div>
+                              </div>
+                              <div>
+                                <div className="text-[9px] sm:text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Autarkie</div>
+                                <div className="font-bold text-slate-700 dark:text-slate-200 text-sm sm:text-base">{data.Autarkie.toFixed(1)}%</div>
+                              </div>
+                            </div>
+
+                            <div className="hidden lg:flex flex-col items-end justify-center w-32 shrink-0">
+                              <div className="w-full bg-slate-200 dark:bg-slate-800 rounded-full h-1.5 mb-1">
+                                <div className="bg-blue-500 h-1.5 rounded-full" style={{width: `${data.Autarkie}%`}}></div>
+                              </div>
+                              <div className="text-[9px] text-slate-400 font-bold uppercase">Autarkie Trend</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* VIEW 2: BAR CHART (JAHRESVERGLEICH) */}
+                  {matrixView === 'bar' && (
+                    <div className="animate-in fade-in duration-300">
+                      <div className="h-80 w-full mt-4">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={chartData} margin={{top: 20, right: 10, left: -20, bottom: 0}}>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#64748b" opacity={0.2} />
+                            <XAxis dataKey="year" stroke="#94a3b8" axisLine={false} tickLine={false} />
+                            <YAxis stroke="#94a3b8" axisLine={false} tickLine={false} tickFormatter={formatKwh} />
+                            <RechartsTooltip cursor={{fill: '#64748b', opacity: 0.1}} content={<CustomTooltip />} />
+                            <Legend wrapperStyle={{paddingTop: '20px', fontSize: '12px', fontWeight: 'bold', color: '#94a3b8'}} />
+                            <Bar dataKey="Erzeugung" name="Erzeugt" fill="#f59e0b" radius={[4, 4, 0, 0]} />
+                            <Bar dataKey="Eigenverbrauch" name="Eigenverbrauch" fill="#10b981" radius={[4, 4, 0, 0]} />
+                            <Bar dataKey="Hausverbrauch" name="Hausbedarf" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* VIEW 3: PIE CHART (VERTEILUNG ALL TIME) */}
+                  {matrixView === 'pie' && (
+                    <div className="animate-in fade-in duration-300 grid grid-cols-1 lg:grid-cols-2 gap-8 mt-4">
+                      <div className="bg-slate-50 dark:bg-[#121212] p-4 rounded-2xl border border-slate-100 dark:border-white/5">
+                        <h4 className="text-center font-bold text-sm text-slate-500 mb-4 uppercase tracking-wider">Erzeugungsanteile (All Time)</h4>
+                        <div className="h-64">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                              <Pie data={pieDataProducers} cx="50%" cy="50%" innerRadius={60} outerRadius={90} paddingAngle={5} dataKey="value">
+                                {pieDataProducers.map((entry, index) => <Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />)}
+                              </Pie>
+                              <RechartsTooltip content={<CustomPieTooltip />} />
+                              <Legend wrapperStyle={{fontSize: '12px', fontWeight: 'bold'}} />
+                            </PieChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </div>
+
+                      <div className="bg-slate-50 dark:bg-[#121212] p-4 rounded-2xl border border-slate-100 dark:border-white/5">
+                        <h4 className="text-center font-bold text-sm text-slate-500 mb-4 uppercase tracking-wider">Stromnutzung (All Time)</h4>
+                        <div className="h-64">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                              <Pie data={pieDataUsage} cx="50%" cy="50%" innerRadius={60} outerRadius={90} paddingAngle={5} dataKey="value">
+                                <Cell fill="#10b981" />
+                                <Cell fill="#ef4444" />
+                              </Pie>
+                              <RechartsTooltip content={<CustomPieTooltip />} />
+                              <Legend wrapperStyle={{fontSize: '12px', fontWeight: 'bold'}} />
+                            </PieChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
               </div>
